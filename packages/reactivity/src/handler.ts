@@ -1,4 +1,5 @@
 import {ReactiveFlags} from "./reactive";
+import {activeEffect, track, trigger} from "./effect";
 
 export const mutableHandlers = {
     // 读取 state.name
@@ -13,15 +14,24 @@ export const mutableHandlers = {
         if (key === ReactiveFlags.IS_REACTIVE) {
             return true
         }
-        // console.log('get', key)
+        const res = Reflect.get(target, key, receiver)
+        // 依赖收集 记录属性和effect关系
+        console.log('get', activeEffect, key)
+        track(target, key)
         // 取值的时候，让属性和effect产生关系
-        return Reflect.get(target, key, receiver)
+        return res
     },
     // 更新
     set(target: object, key: string | symbol, value: any, receiver: any): boolean {
+        let oldValue = target[key]
         // console.log('set', key)
         // 更新数据
         // 找到这个属性对应的effect，让他执行
-        return Reflect.set(target, key, value, receiver)
+        const r = Reflect.set(target, key, value, receiver)
+        // 触发更新
+        if (oldValue !== value) {
+            trigger(target, key, value, oldValue)
+        }
+        return r
     }
 }
