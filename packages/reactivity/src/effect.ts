@@ -1,5 +1,17 @@
 export let activeEffect = null
 
+// 在收集的列表中，将自己移除
+function cleanupEffect(effect: ReactiveEffect) {
+    const {deps} = effect
+    console.log(deps)
+    // 需要处理set
+    for (let i = 0; i < deps.length; i++) {
+        deps[i].delete(effect)
+    }
+    effect.deps.length = 0
+
+}
+
 export class ReactiveEffect {
     parent = undefined
     // 依赖了哪些effect ，Set list
@@ -18,7 +30,8 @@ export class ReactiveEffect {
             this.parent = activeEffect;
             // 标记当前正在执行的effect
             activeEffect = this
-            // fn 执行
+            cleanupEffect(this)// 清空上一次的依赖
+            // fn 执行 ，触犯依赖收集，因此执行之前清理
             return this.fn();
         } finally {
             // 执行完毕后，将activeEffect恢复成上一个effect
@@ -65,10 +78,13 @@ export function track(target, key) {
             deps.add(activeEffect)
             activeEffect.deps.push(deps)
         }
-        console.log(targetMap)
+        /**
+         * name -- Set effect
+         * age -- Set effect
+         * 可以通过当前的effect，找到这两个几何中的自己，将其移除
+         */
+        // console.log(targetMap)
     }
-
-
 }
 
 // 通过对象上的属性，找到effect，让这个effect重新执行
@@ -76,10 +92,14 @@ export function trigger(target, key, newValue, oldValue) {
     const depsMap = targetMap.get(target);
     if (!depsMap) return;
     const dep = depsMap.get(key); // name-> [effect1,effect2] 对应的effect
+    // 需要拷贝一份 不要操作同一个对象，参考test2
+    // 运行的是数组，参数的是set
+    const effects = [...dep]
     if (dep) {
-        dep.forEach(effect => {
+        effects.forEach(effect => {
             // 不断运行自己没有意义
             if (effect !== activeEffect) {
+                console.log('effect running',)
                 effect.run()
             }
         })
