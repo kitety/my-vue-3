@@ -1,3 +1,5 @@
+import {ReactiveFlags} from "./reactive";
+
 export const mutableHandlers = {
     // 读取 state.name
     /**
@@ -7,6 +9,10 @@ export const mutableHandlers = {
      */
     // 使用Reflect 解决this问题
     get(target, key, receiver) {
+        // 有没有被proxy的标志位
+        if (key === ReactiveFlags.IS_REACTIVE) {
+            return true
+        }
         // console.log('get', key)
         // 取值的时候，让属性和effect产生关系
         return Reflect.get(target, key, receiver)
