@@ -16,6 +16,8 @@ export class ReactiveEffect {
     parent = undefined
     // 依赖了哪些effect ，Set list
     deps = []
+    // active状态
+    active = true
 
     // 默认将fn挂载到实例上
     constructor(private fn: Function) {
@@ -26,6 +28,12 @@ export class ReactiveEffect {
      * 也可以标记父子关系
      */
     run() {
+        if (!this.active) {
+            // 不是激活状态，直接执行fn
+            // 不会发生依赖收集
+            return this.fn();
+        }
+
         try {
             this.parent = activeEffect;
             // 标记当前正在执行的effect
@@ -42,7 +50,12 @@ export class ReactiveEffect {
     }
 
     stop() {
-
+        if (this.active) {
+            // 目前激活，那就停止依赖收集
+            this.active = false
+            // 清楚依赖
+            cleanupEffect(this)
+        }
     }
 }
 
@@ -50,6 +63,10 @@ export function effect(fn: Function) {
     // 创建一个响应式effect，并且让effect执行
     const _effect = new ReactiveEffect(fn);
     _effect.run();
+    // 处理this，返回runner方法给用户，用户可以调用
+    const runner = _effect.run.bind(_effect)
+    runner.effect = _effect
+    return runner
 
 }
 
