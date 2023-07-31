@@ -3,7 +3,6 @@ export let activeEffect = null
 // 在收集的列表中，将自己移除
 function cleanupEffect(effect: ReactiveEffect) {
     const {deps} = effect
-    console.log(deps)
     // 需要处理set
     for (let i = 0; i < deps.length; i++) {
         deps[i].delete(effect)
@@ -20,7 +19,8 @@ export class ReactiveEffect {
     active = true
 
     // 默认将fn挂载到实例上
-    constructor(private fn: Function) {
+    // public 实例上
+    constructor(private fn: Function, public scheduler: Function) {
     }
 
     /**
@@ -53,15 +53,15 @@ export class ReactiveEffect {
         if (this.active) {
             // 目前激活，那就停止依赖收集
             this.active = false
-            // 清楚依赖
+            // 清除依赖
             cleanupEffect(this)
         }
     }
 }
 
-export function effect(fn: Function) {
+export function effect(fn: Function, options: any = {}) {
     // 创建一个响应式effect，并且让effect执行
-    const _effect = new ReactiveEffect(fn);
+    const _effect = new ReactiveEffect(fn, options.scheduler);
     _effect.run();
     // 处理this，返回runner方法给用户，用户可以调用
     const runner = _effect.run.bind(_effect)
@@ -111,13 +111,18 @@ export function trigger(target, key, newValue, oldValue) {
     const dep = depsMap.get(key); // name-> [effect1,effect2] 对应的effect
     // 需要拷贝一份 不要操作同一个对象，参考test2
     // 运行的是数组，参数的是set
-    const effects = [...dep]
     if (dep) {
+        const effects = [...dep];
         effects.forEach(effect => {
-            // 不断运行自己没有意义
+            // 不断运行自己没有意义,只有当不是当前的effect的时候，才需要执行
             if (effect !== activeEffect) {
-                console.log('effect running',)
-                effect.run()
+                // 用户传递了更新函数，就执行更新函数
+                if (effect.scheduler) {
+                    effect.scheduler()
+                } else {
+                    // 用户没有传递了更新函数，默认执行effect
+                    effect.run()
+                }
             }
         })
     }

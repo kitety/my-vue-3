@@ -1,5 +1,6 @@
-import {ReactiveFlags} from "./reactive";
+import {reactive, ReactiveFlags} from "./reactive";
 import {track, trigger} from "./effect";
+import {isObject} from "@vue/shared";
 
 export const mutableHandlers = {
     // 读取 state.name
@@ -14,6 +15,11 @@ export const mutableHandlers = {
         if (key === ReactiveFlags.IS_REACTIVE) {
             return true
         }
+        if (isObject(target[key])) {
+            // 取值的时候是对象，再次进行代理，递归变为响应式的，返回代理的结果
+            return reactive(target[key])
+        }
+
         const res = Reflect.get(target, key, receiver)
         // 依赖收集 记录属性和effect关系
         console.log('get', key)
