@@ -1,5 +1,5 @@
-const { build } = require('esbuild')
-const { resolve } = require('path')
+const {build} = require('esbuild')
+const {resolve} = require('path')
 
 const target = 'reactivity'
 
@@ -16,7 +16,7 @@ build({
     format: 'esm',
     // 指定平台 浏览器使用
     platform: 'browser',
-    // watch
+    // apiWatch
     watch: {
         onRebuild(error, result) {
             //文件变化重新构建
@@ -24,6 +24,6 @@ build({
         }
     }
 }).then(() => {
-    console.log('watch...')
+    console.log('apiWatch...')
 
 })

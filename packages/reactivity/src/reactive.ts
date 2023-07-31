@@ -30,3 +30,7 @@ export function reactive(target: object) {
     //2. 目前不用创建，用的方式是，如果这个对象被代理过了，说明已经被proxy拦截过了
     return proxy
 }
+
+export function isReactive(value: object) {
+    return !!value[ReactiveFlags.IS_REACTIVE]
+}
