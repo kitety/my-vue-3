@@ -19,7 +19,7 @@ function traverse(value, seen = new Set()) {
     return value
 }
 
-export function watch(source: object | Function, cb) {
+export function dowatch(source: object | Function, cb: Function | null, options: object = {}) {
     // 1.source 是个响应式对象
     // 2.source 是个函数
 
@@ -35,15 +35,38 @@ export function watch(source: object | Function, cb) {
     let oldValue;
     // 里面的属性就会收集effect
     // 数据变化会执行对应的schedular
-    const effect = new ReactiveEffect(getter, () => {
-        // 收集依赖
-        const newValue = effect.run();
-        cb(newValue, oldValue);
-        oldValue = newValue
-    })
+    let clear;
+    let onCleanUp = (fn: Function) => {
+        clear = fn
+    }
+    const job = () => {
+        if (cb) {
+            //watch
+            // 收集依赖
+            const newValue = effect.run();
+            // 如果有clean函数的话，就执行
+            // 下次执行的时候，将上次的清除掉
+            clear?.();
+            cb?.(newValue, oldValue, onCleanUp);
+            oldValue = newValue
+        } else {
+            //watchEffect ,只需要run即可
+            effect.run()
+        }
+    }
+    const effect = new ReactiveEffect(getter, job)
     // 收集依赖
     oldValue = effect.run();
 
+}
+
+export function watch(source: Function, cb: Function, options: object = {}) {
+    return dowatch(source, cb, options)
+
+}
+
+export function watchEffect(source: Function, options: object = {}) {
+    return dowatch(source, null, options)
 }
 
 // 常见的写法就是监控一个函数的返回值，根据返回值的变化触发对应的操作
