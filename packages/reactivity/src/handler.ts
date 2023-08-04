@@ -22,7 +22,7 @@ export const mutableHandlers = {
 
         const res = Reflect.get(target, key, receiver)
         // 依赖收集 记录属性和effect关系
-        console.log('get', key)
+        // console.log('get', key)
         track(target, key)
         // 取值的时候，让属性和effect产生关系
         return res

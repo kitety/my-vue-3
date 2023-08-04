@@ -1,6 +1,7 @@
 export let activeEffect = null
 
 // 在收集的列表中，将自己移除
+// 一定要清除，不然会执行很多次
 function cleanupEffect(effect: ReactiveEffect) {
     const {deps} = effect
     // 需要处理set
@@ -20,7 +21,7 @@ export class ReactiveEffect {
 
     // 默认将fn挂载到实例上
     // public 实例上
-    constructor(private fn: Function, public scheduler: Function) {
+    constructor(private fn: Function, public scheduler?: Function) {
     }
 
     /**
@@ -84,23 +85,28 @@ export function track(target, key) {
             targetMap.set(target, (depsMap = new Map()))
         }
         // 2. 在根据对象的属性取值，找到set
-        let deps = depsMap.get(key)
+        let dep = depsMap.get(key)
         // 没有 set
-        if (!deps) {
-            depsMap.set(key, (deps = new Set()))
+        if (!dep) {
+            depsMap.set(key, (dep = new Set()))
         }
-        // 3. 将当前的activeEffect存到set中 需要看下有没有这个effect
-        let shouldTrack = !deps.has(activeEffect)
-        if (shouldTrack) {
-            deps.add(activeEffect)
-            activeEffect.deps.push(deps)
-        }
+        // 这个key在这个effect中使用
+        trackEffect(dep)
+    }
+}
+
+export function trackEffect(dep: Set<any>) {
+    if (!activeEffect) return;
+    // 3. 将当前的activeEffect存到set中 需要看下有没有这个effect
+    let shouldTrack = !dep.has(activeEffect)
+    if (shouldTrack) {
+        dep.add(activeEffect)
         /**
          * name -- Set effect
          * age -- Set effect
          * 可以通过当前的effect，找到这两个几何中的自己，将其移除
          */
-        // console.log(targetMap)
+        activeEffect.deps.push(dep)
     }
 }
 
@@ -109,6 +115,10 @@ export function trigger(target, key, newValue, oldValue) {
     const depsMap = targetMap.get(target);
     if (!depsMap) return;
     const dep = depsMap.get(key); // name-> [effect1,effect2] 对应的effect
+    triggerEffect(dep)
+}
+
+export function triggerEffect(dep: Set<any>) {
     // 需要拷贝一份 不要操作同一个对象，参考test2
     // 运行的是数组，参数的是set
     if (dep) {
@@ -126,5 +136,4 @@ export function trigger(target, key, newValue, oldValue) {
             }
         })
     }
-
 }
